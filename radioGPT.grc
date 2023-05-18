@@ -37,7 +37,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: 768e3
+    value: 352e3
   states:
     bus_sink: false
     bus_source: false
@@ -57,11 +57,23 @@ blocks:
     coordinate: [368, 12.0]
     rotation: 0
     state: enabled
+- name: mul
+  id: variable
+  parameters:
+    comment: ''
+    value: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 12.0]
+    rotation: 0
+    state: enabled
 - name: quadRate
   id: variable
   parameters:
     comment: ''
-    value: audioRate*1
+    value: audioRate*2
   states:
     bus_sink: false
     bus_source: false
@@ -73,7 +85,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: 1e6
+    value: 2e6
   states:
     bus_sink: false
     bus_source: false
@@ -89,7 +101,7 @@ blocks:
     audio_rate: int(audioRate)
     comment: ''
     fh: '-1.0'
-    max_dev: 75e3
+    max_dev: 500e3
     maxoutbuf: '0'
     minoutbuf: '0'
     quad_rate: int(quadRate)
@@ -98,7 +110,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [352, 340.0]
+    coordinate: [376, 116.0]
     rotation: 0
     state: true
 - name: blocks_multiply_const_vxx_0
@@ -107,7 +119,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    const: '10'
+    const: mul
     maxoutbuf: '0'
     minoutbuf: '0'
     type: float
@@ -116,7 +128,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [264, 188.0]
+    coordinate: [224, 148.0]
     rotation: 0
     state: true
 - name: blocks_wavfile_source_0
@@ -125,7 +137,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    file: /media/sf_GitHub/radioGPT/people-talking-in-small-room-6064.wav
+    file: /media/sf_GitHub/radioGPT/PCMgettysburg.wav
     maxoutbuf: '0'
     minoutbuf: '0'
     nchan: '1'
@@ -134,25 +146,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [40, 180.0]
-    rotation: 0
-    state: true
-- name: mmse_resampler_xx_0
-  id: mmse_resampler_xx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    phase_shift: '0'
-    resamp_ratio: sampleRate/quadRate
-    type: float
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [456, 128.0]
+    coordinate: [8, 140.0]
     rotation: 0
     state: true
 - name: qtgui_sink_x_0
@@ -184,6 +178,26 @@ blocks:
     coordinate: [144, 492.0]
     rotation: 0
     state: true
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: int(quadRate)
+    fbw: '0'
+    interp: int(sampleRate)
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '[]'
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [256, 284.0]
+    rotation: 0
+    state: true
 - name: soapy_hackrf_sink_0
   id: soapy_hackrf_sink
   parameters:
@@ -196,7 +210,7 @@ blocks:
     dev_args: ''
     samp_rate: int(sampleRate)
     type: fc32
-    vga: '47'
+    vga: '24'
   states:
     bus_sink: false
     bus_source: false
@@ -206,11 +220,11 @@ blocks:
     state: true
 
 connections:
-- [analog_wfm_tx_0, '0', qtgui_sink_x_0, '0']
-- [analog_wfm_tx_0, '0', soapy_hackrf_sink_0, '0']
-- [blocks_multiply_const_vxx_0, '0', mmse_resampler_xx_0, '0']
+- [analog_wfm_tx_0, '0', rational_resampler_xxx_0, '0']
+- [blocks_multiply_const_vxx_0, '0', analog_wfm_tx_0, '0']
 - [blocks_wavfile_source_0, '0', blocks_multiply_const_vxx_0, '0']
-- [mmse_resampler_xx_0, '0', analog_wfm_tx_0, '0']
+- [rational_resampler_xxx_0, '0', qtgui_sink_x_0, '0']
+- [rational_resampler_xxx_0, '0', soapy_hackrf_sink_0, '0']
 
 metadata:
   file_format: 1

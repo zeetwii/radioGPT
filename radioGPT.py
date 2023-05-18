@@ -79,9 +79,10 @@ class radioGPT(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.audioRate = audioRate = 768e3
-        self.sampleRate = sampleRate = 1e6
-        self.quadRate = quadRate = audioRate*1
+        self.audioRate = audioRate = 352e3
+        self.sampleRate = sampleRate = 2e6
+        self.quadRate = quadRate = audioRate*2
+        self.mul = mul = 1
         self.centerFreq = centerFreq = 88e6
 
         ##################################################
@@ -100,7 +101,12 @@ class radioGPT(gr.top_block, Qt.QWidget):
         self.soapy_hackrf_sink_0.set_bandwidth(0, 0)
         self.soapy_hackrf_sink_0.set_frequency(0, int(centerFreq))
         self.soapy_hackrf_sink_0.set_gain(0, 'AMP', True)
-        self.soapy_hackrf_sink_0.set_gain(0, 'VGA', min(max(47, 0.0), 47.0))
+        self.soapy_hackrf_sink_0.set_gain(0, 'VGA', min(max(24, 0.0), 47.0))
+        self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
+                interpolation=int(sampleRate),
+                decimation=int(quadRate),
+                taps=[],
+                fractional_bw=0)
         self.qtgui_sink_x_0 = qtgui.sink_c(
             1024, #fftsize
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -119,14 +125,13 @@ class radioGPT(gr.top_block, Qt.QWidget):
         self.qtgui_sink_x_0.enable_rf_freq(True)
 
         self.top_layout.addWidget(self._qtgui_sink_x_0_win)
-        self.mmse_resampler_xx_0 = filter.mmse_resampler_ff(0, (sampleRate/quadRate))
-        self.blocks_wavfile_source_0 = blocks.wavfile_source('/media/sf_GitHub/radioGPT/people-talking-in-small-room-6064.wav', True)
-        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(10)
+        self.blocks_wavfile_source_0 = blocks.wavfile_source('/media/sf_GitHub/radioGPT/PCMgettysburg.wav', True)
+        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(mul)
         self.analog_wfm_tx_0 = analog.wfm_tx(
         	audio_rate=int(audioRate),
         	quad_rate=int(quadRate),
         	tau=(75e-6),
-        	max_dev=75e3,
+        	max_dev=500e3,
         	fh=(-1.0),
         )
 
@@ -134,11 +139,11 @@ class radioGPT(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_wfm_tx_0, 0), (self.qtgui_sink_x_0, 0))
-        self.connect((self.analog_wfm_tx_0, 0), (self.soapy_hackrf_sink_0, 0))
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.mmse_resampler_xx_0, 0))
+        self.connect((self.analog_wfm_tx_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.analog_wfm_tx_0, 0))
         self.connect((self.blocks_wavfile_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
-        self.connect((self.mmse_resampler_xx_0, 0), (self.analog_wfm_tx_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.qtgui_sink_x_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.soapy_hackrf_sink_0, 0))
 
 
     def closeEvent(self, event):
@@ -154,14 +159,13 @@ class radioGPT(gr.top_block, Qt.QWidget):
 
     def set_audioRate(self, audioRate):
         self.audioRate = audioRate
-        self.set_quadRate(self.audioRate*1)
+        self.set_quadRate(self.audioRate*2)
 
     def get_sampleRate(self):
         return self.sampleRate
 
     def set_sampleRate(self, sampleRate):
         self.sampleRate = sampleRate
-        self.mmse_resampler_xx_0.set_resamp_ratio((self.sampleRate/self.quadRate))
         self.qtgui_sink_x_0.set_frequency_range(self.centerFreq, self.sampleRate)
         self.soapy_hackrf_sink_0.set_sample_rate(0, int(self.sampleRate))
 
@@ -170,7 +174,13 @@ class radioGPT(gr.top_block, Qt.QWidget):
 
     def set_quadRate(self, quadRate):
         self.quadRate = quadRate
-        self.mmse_resampler_xx_0.set_resamp_ratio((self.sampleRate/self.quadRate))
+
+    def get_mul(self):
+        return self.mul
+
+    def set_mul(self, mul):
+        self.mul = mul
+        self.blocks_multiply_const_vxx_0.set_k(self.mul)
 
     def get_centerFreq(self):
         return self.centerFreq
