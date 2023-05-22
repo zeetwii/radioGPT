@@ -73,7 +73,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: audioRate*2
+    value: audioRate*1
   states:
     bus_sink: false
     bus_source: false
@@ -210,7 +210,7 @@ blocks:
     dev_args: ''
     samp_rate: int(sampleRate)
     type: fc32
-    vga: '24'
+    vga: '47'
   states:
     bus_sink: false
     bus_source: false

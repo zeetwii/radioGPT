@@ -5,10 +5,10 @@
 # SPDX-License-Identifier: GPL-3.0
 #
 # GNU Radio Python Flow Graph
-# Title: Radio GPT
+# Title: RadioGPT
 # Author: ZeeTwii
 # Copyright: 2023
-# Description: A GNURadio module meant to convert wav files into RF audio
+# Description: A radio chatbot
 # GNU Radio version: 3.10.5.1
 
 from packaging.version import Version as StrictVersion
@@ -28,6 +28,7 @@ from gnuradio import qtgui
 from gnuradio.filter import firdes
 import sip
 from gnuradio import analog
+from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import filter
 from gnuradio import gr
@@ -43,12 +44,12 @@ from gnuradio import soapy
 
 from gnuradio import qtgui
 
-class radioGPT(gr.top_block, Qt.QWidget):
+class radioGPT_audio(gr.top_block, Qt.QWidget):
 
     def __init__(self):
-        gr.top_block.__init__(self, "Radio GPT", catch_exceptions=True)
+        gr.top_block.__init__(self, "RadioGPT", catch_exceptions=True)
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("Radio GPT")
+        self.setWindowTitle("RadioGPT")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -66,7 +67,7 @@ class radioGPT(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "radioGPT")
+        self.settings = Qt.QSettings("GNU Radio", "radioGPT_audio")
 
         try:
             if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
@@ -79,11 +80,11 @@ class radioGPT(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.audioRate = audioRate = 352e3
-        self.sampleRate = sampleRate = 2e6
-        self.quadRate = quadRate = audioRate*2
+        self.audio_rate = audio_rate = 48e3
+        self.samp_rate = samp_rate = 1e6
+        self.quad_rate = quad_rate = audio_rate * 16
         self.mul = mul = 1
-        self.centerFreq = centerFreq = 88e6
+        self.freq = freq = 88e6
 
         ##################################################
         # Blocks
@@ -97,21 +98,21 @@ class radioGPT(gr.top_block, Qt.QWidget):
 
         self.soapy_hackrf_sink_0 = soapy.sink(dev, "fc32", 1, '',
                                   stream_args, tune_args, settings)
-        self.soapy_hackrf_sink_0.set_sample_rate(0, int(sampleRate))
+        self.soapy_hackrf_sink_0.set_sample_rate(0, samp_rate)
         self.soapy_hackrf_sink_0.set_bandwidth(0, 0)
-        self.soapy_hackrf_sink_0.set_frequency(0, int(centerFreq))
+        self.soapy_hackrf_sink_0.set_frequency(0, freq)
         self.soapy_hackrf_sink_0.set_gain(0, 'AMP', True)
-        self.soapy_hackrf_sink_0.set_gain(0, 'VGA', min(max(24, 0.0), 47.0))
+        self.soapy_hackrf_sink_0.set_gain(0, 'VGA', min(max(47, 0.0), 47.0))
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
-                interpolation=int(sampleRate),
-                decimation=int(quadRate),
+                interpolation=int(samp_rate),
+                decimation=int(quad_rate),
                 taps=[],
                 fractional_bw=0)
         self.qtgui_sink_x_0 = qtgui.sink_c(
             1024, #fftsize
             window.WIN_BLACKMAN_hARRIS, #wintype
-            centerFreq, #fc
-            sampleRate, #bw
+            freq, #fc
+            samp_rate, #bw
             "", #name
             True, #plotfreq
             True, #plotwaterfall
@@ -122,16 +123,16 @@ class radioGPT(gr.top_block, Qt.QWidget):
         self.qtgui_sink_x_0.set_update_time(1.0/10)
         self._qtgui_sink_x_0_win = sip.wrapinstance(self.qtgui_sink_x_0.qwidget(), Qt.QWidget)
 
-        self.qtgui_sink_x_0.enable_rf_freq(True)
+        self.qtgui_sink_x_0.enable_rf_freq(False)
 
         self.top_layout.addWidget(self._qtgui_sink_x_0_win)
-        self.blocks_wavfile_source_0 = blocks.wavfile_source('/media/sf_GitHub/radioGPT/PCMgettysburg.wav', True)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(mul)
+        self.audio_source_0 = audio.source(48000, '', True)
         self.analog_wfm_tx_0 = analog.wfm_tx(
-        	audio_rate=int(audioRate),
-        	quad_rate=int(quadRate),
+        	audio_rate=int(audio_rate),
+        	quad_rate=int(quad_rate),
         	tau=(75e-6),
-        	max_dev=500e3,
+        	max_dev=75e3,
         	fh=(-1.0),
         )
 
@@ -140,40 +141,40 @@ class radioGPT(gr.top_block, Qt.QWidget):
         # Connections
         ##################################################
         self.connect((self.analog_wfm_tx_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.audio_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.analog_wfm_tx_0, 0))
-        self.connect((self.blocks_wavfile_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.qtgui_sink_x_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.soapy_hackrf_sink_0, 0))
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "radioGPT")
+        self.settings = Qt.QSettings("GNU Radio", "radioGPT_audio")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
 
         event.accept()
 
-    def get_audioRate(self):
-        return self.audioRate
+    def get_audio_rate(self):
+        return self.audio_rate
 
-    def set_audioRate(self, audioRate):
-        self.audioRate = audioRate
-        self.set_quadRate(self.audioRate*2)
+    def set_audio_rate(self, audio_rate):
+        self.audio_rate = audio_rate
+        self.set_quad_rate(self.audio_rate * 16)
 
-    def get_sampleRate(self):
-        return self.sampleRate
+    def get_samp_rate(self):
+        return self.samp_rate
 
-    def set_sampleRate(self, sampleRate):
-        self.sampleRate = sampleRate
-        self.qtgui_sink_x_0.set_frequency_range(self.centerFreq, self.sampleRate)
-        self.soapy_hackrf_sink_0.set_sample_rate(0, int(self.sampleRate))
+    def set_samp_rate(self, samp_rate):
+        self.samp_rate = samp_rate
+        self.qtgui_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
+        self.soapy_hackrf_sink_0.set_sample_rate(0, self.samp_rate)
 
-    def get_quadRate(self):
-        return self.quadRate
+    def get_quad_rate(self):
+        return self.quad_rate
 
-    def set_quadRate(self, quadRate):
-        self.quadRate = quadRate
+    def set_quad_rate(self, quad_rate):
+        self.quad_rate = quad_rate
 
     def get_mul(self):
         return self.mul
@@ -182,18 +183,18 @@ class radioGPT(gr.top_block, Qt.QWidget):
         self.mul = mul
         self.blocks_multiply_const_vxx_0.set_k(self.mul)
 
-    def get_centerFreq(self):
-        return self.centerFreq
+    def get_freq(self):
+        return self.freq
 
-    def set_centerFreq(self, centerFreq):
-        self.centerFreq = centerFreq
-        self.qtgui_sink_x_0.set_frequency_range(self.centerFreq, self.sampleRate)
-        self.soapy_hackrf_sink_0.set_frequency(0, int(self.centerFreq))
-
-
+    def set_freq(self, freq):
+        self.freq = freq
+        self.qtgui_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
+        self.soapy_hackrf_sink_0.set_frequency(0, self.freq)
 
 
-def main(top_block_cls=radioGPT, options=None):
+
+
+def main(top_block_cls=radioGPT_audio, options=None):
 
     if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
         style = gr.prefs().get_string('qtgui', 'style', 'raster')
